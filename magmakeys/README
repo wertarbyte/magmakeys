@@ -1,0 +1,22 @@
+  Magmakeys
+ - hot keys, but nearer to the core -
+
+by Stefan Tomanek <stefan@pico.ruhr.de>
+http://stefans.datenbruch.de/magmakeys/
+
+Magmakeys is a system wide hotkey daemon. It watches all connected input
+devices for key and switch events and can launch arbitrary commands when
+certain events are observed.
+
+While there are a lot of hotkey applications available, most of them are tied a
+X11 user session und thus depend on a specific user being logged in. This is
+often not appropiate for functions that should be available even without any
+specific user being logged in and running a specific window manager (or even
+X11 at all).
+
+Magmakeys uses HAL to identify all connected input devices and stay informed about
+newly connected ones. This functionality however is optional and can be disabled,
+should you choose to refrain from HAL and DBUS.
+
+For more information about the use and configuration of the daemon, consult
+"magmakeys --help" and the provided example configuration file.
