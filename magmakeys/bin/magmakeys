@@ -20,6 +20,8 @@ use IO::File;
 use threads;
 use threads::shared;
 
+use constant VERSION => "0.1";
+
 # we need these to connect to HAL and receive the list
 # of connected input devices as well as hotplug events
 # 
@@ -614,6 +616,7 @@ my $result = GetOptions ("help|h"     => \$help,
 
 if ($help || not $result) {
     say 1, "Error parsing command line." unless $result;
+    say 1, "Magmakeys ".VERSION;
     say 1, "  --help              Display this help";
     say 1, "  --config | -c       Specify config file to read hotkey definitions from";
     say 1, "  --hal               Use HAL to detect input devices (default)";
