@@ -210,7 +210,7 @@ use strict;
         my $ie = InputEvent->read_from_device($fh);
         
         unless (defined $ie) {
-            print "Error reading from filehandle, removing ",$fh->{filename},"\n";
+            print "Error reading from filehandle, removing ",$fh->filename," from watchlist\n";
             $self->remove_filehandle($fh);
             return;
         } 
