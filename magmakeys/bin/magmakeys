@@ -1,4 +1,20 @@
 #!/usr/bin/perl
+#
+# magmakeys(.pl)
+# by Stefan Tomanek <stefan@pico.ruhr.de>
+# http://stefans.datenbruch.de/magmakeys/
+# 
+# Magmakey is a system wide hotkey daemon.
+# It watches all connected input devices for
+# key and switch events and can launch arbitrary
+# commands when certain events are observed.
+#
+# It is designed to handle hardware specific keys
+# like wireless or suspend controls that usually
+# are not user specific
+
+use constant VERSION => "0.2";
+
 use strict;
 
 {
@@ -25,11 +41,22 @@ use strict;
         my $filename = shift;
 
         my $fh = new IO::File($filename, "r");
+        return 0 unless defined $fh;
+
         while (my $line = <$fh>) {
+            # ignore comments
+            next if $line =~ /^#/;
+            #
+            # lines look like this:
+            # KEY_F1 0x28
+            #
+            # the prefix indicates the event type (KEY)
+            # the (hex)number is the code we'll read from the device file
             my ($string, $number) = split(/[[:space:]]+/, $line);
             $number = hex($number) if $number =~ /^0x/;
 
             my ($prefix, $desc) = split(/_/, $string, 2);
+            # lines starting with EV_ contain the code numbers indicating the event type
             if ($prefix eq "EV") {
                 $type{$string} = $number;
             } else {
@@ -43,7 +70,17 @@ use strict;
         return 1;
     }
 
+    sub lookup_constants {
+        my $proto = shift;
+        my $class = ref($proto) || $proto;
+        my $name = shift;
 
+        my $code_id = $code{$name}{code};
+        my $type_id = $type{ $code{$name}{type} };
+        return [$type_id, $code_id];
+    }
+
+    # construct a new event object by specifying code numbers for type, code and value
     sub new {
         my $proto = shift;
         my $class = ref($proto) || $proto;
@@ -56,28 +93,32 @@ use strict;
         } else {
             return undef;
         }
+        $self->{DEVICE} = undef;
 
         bless($self, $class);
     }
 
-    sub read_from_filehandle {
+    sub read_from_device {
         my $proto = shift;
         my $class = ref($proto) || $proto;
         
-        my $fh = shift;
+        my $dev = shift;
         
         my $buffer;
-        my $len = sysread($fh, $buffer, $struct_len);
+        my $len = sysread($dev, $buffer, $struct_len);
         return undef unless $len > 0;
         
         my ($sec, $usec, $type, $code, $value) = unpack('L!L!S!S!i!', $buffer);
 
-        return $class->new($type, $code, $value);
+        my $me = $class->new($type, $code, $value);
+        $me->{DEVICE} = $dev->filename;
+        return $me;
     }
 
     sub type { return shift()->{TYPE}; }
     sub code { return shift()->{CODE}; }
     sub value { return shift()->{VALUE}; }
+    sub device { return shift()->{DEVICE}; }
 
     sub name {
         my $self = shift;
@@ -101,9 +142,33 @@ use strict;
 
     sub as_string {
         my $self = shift;
-        return "InputEvent ",$self->type,"/",$self->code," (", $self->name, ") with value ", $self->value;
+        return ($self->device ? $self->device : "Unknown device"),": InputEvent ",$self->type,"/",$self->code," (", $self->name, ") with value ", $self->value;
     }
+
+    1;
 } 
+
+{
+    package DeviceFile;
+    our @ISA = ("IO::File");
+
+    sub new {
+        my $proto = shift;
+        my $class = ref($proto) || $proto;
+
+        my $filename = shift;
+        my $self = $class->SUPER::new($filename, 'r');
+
+        ${*$self}->{FILENAME} = $filename;
+
+        bless( $self, $class );
+    }
+
+    sub filename {
+        my $self = shift;
+        return ${*$self}->{FILENAME};
+    }
+}
 
 {
     package DeviceWatcher;
@@ -111,7 +176,25 @@ use strict;
     sub new {
         my $proto = shift;
         my $class = ref($proto) || $proto;
-        bless( {}, $class );
+        my $self = {};
+        $self->{DUMP} = 0;
+
+        $self->{LISTENERS} = [];
+
+        bless( $self, $class );
+    }
+
+    # dump received events?
+    sub dump {
+        my $self = shift;
+        $self->{DUMP} = shift if (@_);
+        return $self->{DUMP};
+    }
+
+    sub add_listener {
+        my $self = shift;
+        my $l = shift;
+        push @{ $self->{LISTENERS} }, $l;
     }
 
     # add or remove handles
@@ -124,26 +207,31 @@ use strict;
     sub process_filehandle {
         my $self = shift;
         my $fh = shift;
-        my $ie = InputEvent->read_from_filehandle($fh);
+        my $ie = InputEvent->read_from_device($fh);
         
         unless (defined $ie) {
-            print "Error reading from filehandle, removing\n";
+            print "Error reading from filehandle, removing ",$fh->{filename},"\n";
             $self->remove_filehandle($fh);
             return;
         } 
 
         if ($ie->type_description eq "EV_KEY" || $ie->type_description eq "EV_SW") {
-            print $ie->as_string, "\n";
+            if ($self->dump) {
+                print $ie->as_string, "\n";
+            }
+            # do something useful and inform our listeners
+            for my $l ( @{ $self->{LISTENERS} } ) {
+                $l->handle_event($ie);
+            }
         }
     }
-
+    1;
 }
 
 {
     package SelectDeviceWatcher;
     our @ISA = ("DeviceWatcher");
 
-    require IO::File;
     require IO::Select;
 
     sub new {
@@ -166,7 +254,6 @@ use strict;
         my $self = shift;
         my $fh = shift;
         $self->SUPER::remove_filehandle($fh);
-        print "Removing filehandle ", $fh->fileno, " from selector\n";
         $self->{SELECTOR}->remove($fh);
     }
 
@@ -180,7 +267,7 @@ use strict;
             return unless $sel->count > 0;
         }
     }
-
+    1;
 }
 
 {
@@ -193,19 +280,23 @@ use strict;
         my $proto = shift;
         my $class = ref($proto) || $proto;
         my $self = $class->SUPER::new();
+        
+        my $bus = Net::DBus->system;
+        $self->{HAL} = $bus->get_service("org.freedesktop.Hal");
 
         $self->{REACTOR} = Net::DBus::Reactor->main;
-        
+
         bless($self, $class);
     }
+
 
     sub add_filehandle {
         my $self = shift;
         my $dev = shift;
 
         my $read_cb = sub {
-            my $fh = shift;
-            $self->process_filehandle($fh);
+            my $dev = shift;
+            $self->process_filehandle($dev);
         };
 
         $self->{REACTOR}->add_read( 
@@ -221,15 +312,16 @@ use strict;
     sub remove_filehandle {
         my $self = shift;
         my $dev = shift;
-        print "Removing read handler from reactor\n";
         $self->{REACTOR}->remove_read($dev->fileno);
     }
 
     sub cb_device_added {
         my $self = shift;
         my $device_id = shift;
-        my $dev = $self->{hal}->get_object($device_id, 'org.freedesktop.Hal.Device');
+        # a new device has been added to the system, let's take a look at it
+        my $dev = $self->{HAL}->get_object($device_id, 'org.freedesktop.Hal.Device');
         my $props = $dev->GetAllProperties;
+        # is it an input device?
         if ($props->{"linux.subsystem"} eq "input") {
             # check input capabilities
             # only watch devices with keys, switches or buttons
@@ -239,8 +331,9 @@ use strict;
                     $cap eq "input.keys" ||
                     $cap eq "input.switch" ||
                     $cap eq "buttons") {
-                    
-                    $self->add_filehandle(new IO::File($props->{"input.device"}, 'r'));
+
+                    # add it to our watch list
+                    $self->add_filehandle(new DeviceFile($props->{"input.device"}));
 
                     last;
                 }
@@ -250,27 +343,188 @@ use strict;
 
     sub watch {
         my $self = shift;
-        # install hotplug listener
-        my $bus = Net::DBus->system;
-        $self->{hal} = $bus->get_service("org.freedesktop.Hal");
-        my $manager = $self->{hal}->get_object("/org/freedesktop/Hal/Manager", "org.freedesktop.Hal.Manager");
+        my $manager = $self->{HAL}->get_object("/org/freedesktop/Hal/Manager", "org.freedesktop.Hal.Manager");
         # add all existing devices
         foreach my $id (@{$manager->GetAllDevices}) {
             $self->cb_device_added($id);
         }
 
-        # register device added callback
+        # register hotplug callback
         $manager->connect_to_signal("DeviceAdded", sub {$self->cb_device_added(shift)} );
 
         # start main loop
         $self->{REACTOR}->run();
     }
+
+    1;
 }
 
-InputEvent->load_constants(shift @ARGV);
+{
+    package EventHandlerManager;
+    require IO::File;
 
-my $watcher = new DBusDeviceWatcher();
-for (@ARGV) {
-    $watcher->add_filehandle(new IO::File($_, 'r'));
+    sub new {
+        my $proto = shift;
+        my $class = ref($proto) || $proto;
+        my $self = {};
+        
+        $self->{HANDLERS} = {};
+        
+        bless($self, $class);
+    }
+
+    sub flush_handlers {
+        my $self = shift;
+        $self->{HANDLERS} = {};
+    }
+
+    sub add_handler {
+        my $self = shift;
+        my $event_name = shift;
+        my $value = shift;
+        my $cmd = shift;
+        my ($tid, $cid) = @{ InputEvent->lookup_constants( $event_name ) };
+        if (defined $tid && defined $cid) {
+            $self->{HANDLERS}{$tid}{$cid}{$value} = $cmd;
+            return 1;
+        }
+        return undef;
+    }
+
+    sub handle_event {
+        my $self = shift;
+        my $event = shift;
+        
+        if (defined $self->{HANDLERS}{$event->type}{$event->code}{$event->value}) {
+            print "Launching command '",$self->{HANDLERS}{$event->type}{$event->code}{$event->value}, "'\n";
+            if (fork() == 0) {
+                exec($self->{HANDLERS}{$event->type}{$event->code}{$event->value});
+            }
+        }
+    }
+
+    sub read_handlers_from_file {
+        my $self = shift;
+        my $filename = shift;
+        
+        my $fh = new IO::File($filename, 'r');
+        while (<$fh>) {
+            s/#.*//;
+            next unless /[^[:space:]]/;
+
+            if (/^((?:KEY|SW)_[[:alnum:]_]+)[[:space:]]+([[:digit:]]+)[[:space:]]+(.*)$/) {
+                my ($ev, $val, $cmd) = ($1, $2, $3);
+                unless ($self->add_handler($ev, $val, $cmd)) {
+                    print STDERR "Unknown event '$ev'\n";
+                }
+            } else {
+                print STDERR "Unable to parse line: $_\n";
+            }
+        }
+        $fh->close();
+    }
 }
+
+use Getopt::Long;
+
+my $use_hal = 1;
+my $help = 0;
+my $dump_events = 0;
+my $config_file = undef;
+my $table_file = "/usr/share/magmakeys/eventcodes.txt";
+my @manual_devs = ();
+
+my $event_manager;
+
+sub say {
+    my ($level, @msg) = @_;
+    print @msg, "\n";
+}
+
+sub reload_config {
+    say 1, "Reloading config...";
+    $event_manager->flush_handlers();
+    my $success = $event_manager->read_handlers_from_file($config_file);
+    if ($success) {
+        say 1, "Successfully reloaded config file";
+    } else {
+        say 1, "Error reloading config file!";
+    }
+}
+
+# install signal handlers
+$SIG{CHLD} = "IGNORE";
+$SIG{HUP} = \&reload_config;
+
+# parse command line
+my $result = GetOptions ("help|h"     => \$help,
+                         "hal!"       => \$use_hal,
+                         "dump"       => \$dump_events,
+                         "dev|d=s"    => \@manual_devs,
+                         "config|c=s" => \$config_file,
+                         "table|t=s"  => \$table_file);
+
+if ($help || not $result) {
+    say 1, "Error parsing command line." unless $result;
+    say 1, "Magmakeys ".VERSION;
+    say 1, "  --help              Display this help";
+    say 1, "  --config | -c       Specify config file to read hotkey definitions from";
+    say 1, "  --hal               Use HAL to detect input devices (default)";
+    say 1, "  --nohal             Do not use HAL but listen to specified devices";
+    say 1, "  --dev | -d          Manually specify input device";
+    say 1, "  --dump              Dump captured events";
+    say 1, "  --table | -t        File containing event code table (default /usr/share/magmakeys/eventcodes.txt)";
+    say 1, "";
+    say 1, "Additional arguments are considered input device names.";
+    exit not $result;
+}
+
+# additional arguments not touched by Getopt are considered input devices
+for my $d (@ARGV) {
+    push @manual_devs, $d;
+}
+
+if (@manual_devs && $use_hal) {
+    say 1, "HAL and manually specified devices are mutually exclusive.";
+    exit 1;
+}
+
+# load constants from file
+unless ( InputEvent->load_constants($table_file) ) {
+    say 1, "Error loading constants from '$table_file'";
+    exit 1;
+}
+
+my $watcher = undef;
+if ($use_hal) {
+    $watcher = new DBusDeviceWatcher();
+} else {
+    $watcher = new SelectDeviceWatcher();
+    # add specified devices
+    for my $d (@manual_devs) {
+        my $dev = new DeviceFile($d);
+        unless ($dev) {
+            say 1, "Error opening '$d'";
+            exit 1;
+        }
+        $watcher->add_filehandle($dev);
+    }
+}
+$watcher->dump($dump_events);
+
+$event_manager = new EventHandlerManager();
+$watcher->add_listener($event_manager);
+
+if ($config_file) {
+    my $success = $event_manager->read_handlers_from_file($config_file);
+
+    unless ($success) {
+        say 1, "Error reading config file '$config_file'";
+        exit 1;
+    }
+} elsif (not $dump_events) {
+    say 1, "A config file or --dump is required. Nothing to do, quitting.";
+    exit 1;
+}
+
 $watcher->watch();

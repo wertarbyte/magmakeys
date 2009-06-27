@@ -18,7 +18,7 @@ PATH=/sbin:/usr/sbin:/bin:/usr/bin
 DESC="system hotkey daemon"
 NAME=magmakeys
 DAEMON=/usr/local/sbin/$NAME
-DAEMON_ARGS="-c /etc/magmakeys.conf"
+DAEMON_ARGS="-c /etc/magmakeys.conf -t /usr/local/share/magmakeys/eventcodes.txt"
 PIDFILE=/var/run/$NAME.pid
 SCRIPTNAME=/etc/init.d/$NAME
 

@@ -20,3 +20,7 @@ should you choose to refrain from HAL and DBUS.
 
 For more information about the use and configuration of the daemon, consult
 "magmakeys --help" and the provided example configuration file.
+
+The file share/eventcodes.txt should be placed in the directory /usr/share/magmakeys/,
+where it will be found by the magmakeys program. If placed elsewhere, its location can
+be specified by using the "-t" option on the magmakeys commandline.
