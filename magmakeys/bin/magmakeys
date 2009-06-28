@@ -13,7 +13,7 @@
 # like wireless or suspend controls that usually
 # are not user specific
 
-use constant VERSION => "0.2";
+use constant VERSION => "0.2.1";
 
 use strict;
 
@@ -441,20 +441,8 @@ sub say {
     print @msg, "\n";
 }
 
-sub reload_config {
-    say 1, "Reloading config...";
-    $event_manager->flush_handlers();
-    my $success = $event_manager->read_handlers_from_file($config_file);
-    if ($success) {
-        say 1, "Successfully reloaded config file";
-    } else {
-        say 1, "Error reloading config file!";
-    }
-}
-
 # install signal handlers
 $SIG{CHLD} = "IGNORE";
-$SIG{HUP} = \&reload_config;
 
 # parse command line
 my $result = GetOptions ("help|h"     => \$help,
