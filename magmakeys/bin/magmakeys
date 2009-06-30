@@ -439,7 +439,7 @@ use strict;
         my $self = shift;
         my $key = shift;
         $self->{"keys"}{$key}--;
-        unless ($self->{"keys"}{$key}--) {
+        unless ($self->{"keys"}{$key} > 0) {
             delete $self->{"keys"}{$key};
         }
     }
