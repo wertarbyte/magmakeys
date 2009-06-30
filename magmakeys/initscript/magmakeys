@@ -19,6 +19,7 @@ DESC="system hotkey daemon"
 NAME=magmakeys
 DAEMON=/usr/sbin/$NAME
 DAEMON_ARGS="-c /etc/magmakeys.conf -t /usr/share/magmakeys/eventcodes.txt"
+DAEMON_OPTS=""
 PIDFILE=/var/run/$NAME.pid
 SCRIPTNAME=/etc/init.d/$NAME
 
@@ -47,7 +48,7 @@ do_start()
 	start-stop-daemon --start --quiet --pidfile $PIDFILE --startas $DAEMON --test > /dev/null \
 		|| return 1
 	start-stop-daemon --start --quiet -b -m --pidfile $PIDFILE --startas $DAEMON -- \
-		$DAEMON_ARGS \
+		$DAEMON_ARGS $DAEMON_OPTS \
 		|| return 2
 	# Add code here, if necessary, that waits for the process to be ready
 	# to handle requests from services started subsequently which depend

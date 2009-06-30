@@ -13,7 +13,7 @@
 # like wireless or suspend controls that usually
 # are not user specific
 
-use constant VERSION => "0.2.1";
+use constant VERSION => "0.3.0";
 
 use strict;
 
@@ -378,30 +378,9 @@ use strict;
         $self->{HANDLERS} = {};
     }
 
-    sub add_handler {
-        my $self = shift;
-        my $event_name = shift;
-        my $value = shift;
-        my $cmd = shift;
-        my ($tid, $cid) = @{ InputEvent->lookup_constants( $event_name ) };
-        if (defined $tid && defined $cid) {
-            $self->{HANDLERS}{$tid}{$cid}{$value} = $cmd;
-            return 1;
-        }
-        return undef;
-    }
+    sub add_handler {}
 
-    sub handle_event {
-        my $self = shift;
-        my $event = shift;
-        
-        if (defined $self->{HANDLERS}{$event->type}{$event->code}{$event->value}) {
-            print "Launching command '",$self->{HANDLERS}{$event->type}{$event->code}{$event->value}, "'\n";
-            if (fork() == 0) {
-                exec($self->{HANDLERS}{$event->type}{$event->code}{$event->value});
-            }
-        }
-    }
+    sub handle_event {}
 
     sub read_handlers_from_file {
         my $self = shift;
@@ -412,7 +391,7 @@ use strict;
             s/#.*//;
             next unless /[^[:space:]]/;
 
-            if (/^((?:KEY|SW)_[[:alnum:]_]+)[[:space:]]+([[:digit:]]+)[[:space:]]+(.*)$/) {
+            if (/^((?:KEY|SW)_[[:alnum:]_]+(?:\+(?:KEY|SW)_[[:alnum:]_]+)*)[[:space:]]+([[:digit:]]+)[[:space:]]+(.*)$/) {
                 my ($ev, $val, $cmd) = ($1, $2, $3);
                 unless ($self->add_handler($ev, $val, $cmd)) {
                     print STDERR "Unknown event '$ev'\n";
@@ -422,6 +401,81 @@ use strict;
             }
         }
         $fh->close();
+    }
+}
+
+{
+    package KeyboardManager;
+    our @ISA = ("EventHandlerManager");
+
+    sub new {
+        my $proto = shift;
+        my $class = ref($proto) || $proto;
+        
+        my $self = $class->SUPER::new();
+
+        $self->{"keys"} = {};
+
+        bless($self, $class);
+    }
+
+    sub add_handler {
+        my $self = shift;
+        my $event_name = shift;
+        my $value = shift;
+        my $cmd = shift;
+        
+        $self->{HANDLERS}{$event_name}{$value} = $cmd;
+    }
+
+    sub press {
+        my $self = shift;
+        my $key = shift;
+
+        $self->{"keys"}{$key}++;
+    }
+
+    sub release {
+        my $self = shift;
+        my $key = shift;
+        $self->{"keys"}{$key}--;
+        unless ($self->{"keys"}{$key}--) {
+            delete $self->{"keys"}{$key};
+        }
+    }
+
+    sub state {
+        my $self = shift;
+        return sort keys %{$self->{keys}};
+    }
+
+    sub handle_event {
+        my $self = shift;
+        my $event = shift;
+        
+        my $cmd = undef;
+
+        if ($event->type_description eq "EV_KEY") {
+            my $state_string;
+            if ($event->value == 1) {
+                $self->press($event->name);
+                $state_string = join("+", $self->state);
+            } elsif ($event->value == 0) {
+                $state_string = join("+", $self->state);
+                $self->release($event->name);
+            } elsif ($event->value == 2) {
+                $state_string = join("+", $self->state);
+            }
+            $cmd = $self->{HANDLERS}{$state_string}{$event->value};
+        } else {
+            $cmd = $self->{HANDLERS}{$event->name}{$event->value};
+        }
+        if (defined $cmd) {
+            print "Launching command '",$cmd, "'\n";
+            if (fork() == 0) {
+                exec($cmd);
+            }
+        }
     }
 }
 
@@ -500,7 +554,7 @@ if ($use_hal) {
 }
 $watcher->dump($dump_events);
 
-$event_manager = new EventHandlerManager();
+$event_manager = new KeyboardManager();
 $watcher->add_listener($event_manager);
 
 if ($config_file) {
