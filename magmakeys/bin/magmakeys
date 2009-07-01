@@ -13,7 +13,7 @@
 # like wireless or suspend controls that usually
 # are not user specific
 
-use constant VERSION => "0.3.0";
+use constant VERSION => "0.3.1";
 
 use strict;
 
@@ -387,17 +387,21 @@ use strict;
         my $filename = shift;
         
         my $fh = new IO::File($filename, 'r');
+        my $i = 0;
         while (<$fh>) {
+            $i++;
             s/#.*//;
             next unless /[^[:space:]]/;
 
-            if (/^((?:KEY|SW)_[[:alnum:]_]+(?:\+(?:KEY|SW)_[[:alnum:]_]+)*)[[:space:]]+([[:digit:]]+)[[:space:]]+(.*)$/) {
-                my ($ev, $val, $cmd) = ($1, $2, $3);
-                unless ($self->add_handler($ev, $val, $cmd)) {
-                    print STDERR "Unknown event '$ev'\n";
+            if (/^((?:KEY|SW)_[[:alnum:]_]+(?:\+(?:KEY|SW)_[[:alnum:]_]+)*)[[:space:]]+([[:digit:],]+)[[:space:]]+(.*)$/) {
+                my ($ev, $values, $cmd) = ($1, $2, $3);
+                for my $val ( split(/,/, $values) ) {
+                    unless ($self->add_handler($ev, $val, $cmd)) {
+                        print STDERR "Unknown to register event handler for event '$ev' and value '$val' (line $i)\n";
+                    }
                 }
             } else {
-                print STDERR "Unable to parse line: $_\n";
+                print STDERR "Unable to parse line $i: $_\n";
             }
         }
         $fh->close();

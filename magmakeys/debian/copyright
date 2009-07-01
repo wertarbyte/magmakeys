@@ -1,0 +1,33 @@
+This package was debianized by Stefan Tomanek <stefan@pico.ruhr.de> on
+Mon, 29 Jun 2009 23:44:19 +0200.
+
+It was downloaded from http://stefans.datenbruch.de/magmakeys/
+
+Upstream Author(s):
+
+    Stefan Tomanek <stefan@pico.ruhr.de>
+
+Copyright:
+
+    <Copyright (C) 2009 Stefan Tomanek>
+
+License:
+
+    This software is copyright (c) 1998-99 by Emil Brink, Obsession
+    Development.
+    
+    You are free to distribute this software under the terms of
+    the GNU General Public License either version 2 of the License,
+    or (at your option) any later version.
+    On Debian systems, the complete text of the GNU General Public
+    License can be found in the file `/usr/share/common-licenses/GPL-2'.
+
+The Debian packaging is:
+
+    Copyright (C) 2009 Stefan Tomanek <stefan@pico.ruhr.de>
+
+and is licensed under the GPL version 3, 
+see `/usr/share/common-licenses/GPL-3'.
+
+# Please also look if there are files or directories which have a
+# different copyright/license attached and list them here.
