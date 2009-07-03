@@ -29,6 +29,7 @@ build-stamp: configure-stamp
 	# Add here commands to compile the package.
 	#$(MAKE)
 	#docbook-to-man debian/magmakeys.sgml > magmakeys.1
+	pod2man bin/magmakeys > debian/magmakeys.1
 
 	touch $@
 
@@ -39,6 +40,7 @@ clean:
 
 	# Add here commands to clean up after the build process.
 	#$(MAKE) clean
+	rm debian/magmakeys.1 || true
 
 	dh_clean 
 
@@ -77,7 +79,7 @@ binary-arch: install
 	dh_installinit
 #	dh_installcron
 #	dh_installinfo
-#	dh_installman
+	dh_installman
 	dh_link
 	dh_strip
 	dh_compress

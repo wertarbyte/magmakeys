@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 #
-# magmakeys(.pl)
+# magmakeys
 # by Stefan Tomanek <stefan@pico.ruhr.de>
 # http://stefans.datenbruch.de/magmakeys/
 # 
@@ -13,7 +13,7 @@
 # like wireless or suspend controls that usually
 # are not user specific
 
-use constant VERSION => "0.3.1";
+use constant VERSION => "0.3.2";
 
 use strict;
 

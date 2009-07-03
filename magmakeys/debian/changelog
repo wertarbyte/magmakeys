@@ -1,12 +1,18 @@
+magmakeys (0.3.2) unstable; urgency=low
+
+  * added documentation
+
+ -- Stefan Tomanek <stefan.tomanek@wertarbyte.de>  Fri, 03 Jul 2009 15:40:13 +0200
+
 magmakeys (0.3.1) unstable; urgency=low
 
   * specifying multiple values for an event handler is now possible
   * key combinations do work
 
- -- Stefan Tomanek <stefan@nano.zollstock.wertarbyte.de>  Wed, 01 Jul 2009 15:21:19 +0200
+ -- Stefan Tomanek <stefan.tomanek@wertarbyte.de>  Wed, 01 Jul 2009 15:21:19 +0200
 
 magmakeys (0.2.1-1) unstable; urgency=low
 
   * Initial release
 
- -- Stefan Tomanek <stefan@pico.ruhr.de>  Mon, 29 Jun 2009 23:44:19 +0200
+ -- Stefan Tomanek <stefan.tomanek@wertarbyte.de>  Mon, 29 Jun 2009 23:44:19 +0200
