@@ -17,6 +17,123 @@ use constant VERSION => "0.3.1";
 
 use strict;
 
+=pod
+
+=head1 NAME
+
+magmakeys -- global hotkey event daemon
+
+=head1 SYNOPSIS
+
+B<magmakeys> [B<-c> I<configfile>] [B<--dump>] [B<-t> I<tablefile>] [B<--hal> | B<--nohal> [B<-d> I<device>] [I<devices...>]] 
+
+=head1 DESCRIPTION
+
+Magmakeys is a hotkey daemon that operates on a system wide scale. It watches all connected input devices
+for key, switch or button events and can launch arbitrary commands specified by the administrator. In contrast
+to hotkey services provided by desktop environments, Magmakeys is especially suited to hardware related switches
+like volume or wifi control; it works independently from a specific user being logged in.
+
+=head1 OPTIONS AND ARGUMENTS
+
+=over
+
+=item B<--help>
+
+Shows usage instructions
+
+=item B<--config> | B<-c>
+
+Sets the config file with hotkey definitions
+(mandatory when not using B<--dump>)
+
+=item B<--hal>
+
+Enables HAL for detecting input devices (default)
+
+=item B<--nohal>
+
+Disables the use of HAL for detecting input devices;
+Devices that should be observed must be specified
+on the command line (see B<--dev>)
+
+=item B<--dev> | B<-d>
+
+Specifies a single input device to read from
+
+=item B<--dump>
+
+Dump all recognized events to STDOUT
+
+=back
+
+Additional command line arguments are considered filenames of input devices.
+
+=head1 CONFIGURATION
+
+The hotkey bindings used by Magmakeys are set in the configuration file I</etc/magmakeys.conf>. Each line consists of three segments:
+The symbolic name of the event to react to, the value carried by the expected event, and of course the command to be launched.
+
+The event names are translated by looking up the kernel codes through the file I</usr/share/magmakeys/eventcodes.txt> (or any other file specified by B<-t>) and can be found by pressing the selected key while running magmakeys with the option B<--dump>.
+
+Key events carry the value I<1> for a key being pressed and transmit the payload I<0> when it is released; holding the key down constantly yields events with a value of I<2>.
+
+The command can include any number of arguments. Please include the full path to avoid trouble through different $PATH settings for the daemon and your interactive session.
+
+The three fields are seperated by an arbitrary number of whitespaces, while anything behind a # character is ignored and considered a comment.
+
+=head1 EXAMPLE
+
+=head2 Starting the daemon
+
+B<magmakeys --hal --dump>
+
+Dump all events processable by magmakeys to the console; this is useful to find out the correct event name for a specific key.
+
+B<magmakeys -c /etc/magmakeys.conf>
+
+Retrieve the list of input devices from HAL (default) and react to events according to the configuration file I</etc/magmakeys.conf>.
+
+B<magmakeys --dump --nohal /dev/input/event5 /dev/input/event6>
+
+Disable the use of HAL and only dump events from the two devices specified
+
+=head2 configuration file
+
+Any number of event handlers can be placed in the configuration file:
+
+    # /etc/magmakeys.conf
+    #
+    # Suspend the system
+    KEY_SLEEP       1       /usr/sbin/hibernate-ram
+    
+    # Change mixer volume when pressing the appropiate keys (or holding them)
+    KEY_VOLUMEUP    1,2    /usr/bin/amixer set Master 5%+
+    KEY_VOLUMEDOWN  1,2    /usr/bin/amixer set Master 5%-
+    
+    # Change the beeper volume when pressing shift
+    KEY_LEFTSHIFT+KEY_VOLUMEUP    1,2     /usr/bin/amixer set Beep 5%+
+    KEY_LEFTSHIFT+KEY_VOLUMEDOWN  1,2     /usr/bin/amixer set Beep 5%-
+
+=head1 AUTHOR
+
+Stefan Tomanek E<lt>stefan.tomanek@wertarbyte.deE<gt>
+
+=cut
+
+sub showHelp {
+    my ($message, $error) = @_;
+
+    my $msg = "Magmakeys ".VERSION."\n";
+    $msg .= "\n$message\n" if $message;
+    my $exit_status = ($error ? 2 : 0);
+    my $filehandle = ($error ? \*STDERR : \*STDOUT);
+    pod2usage(   -msg     => $msg,
+                 -exitval => $exit_status,
+                 -verbose => 1,
+                 -output  => $filehandle );
+}
+
 {
     # Event class
     package InputEvent;
@@ -484,6 +601,7 @@ use strict;
 }
 
 use Getopt::Long;
+use Pod::Usage;
 
 my $use_hal = 1;
 my $help = 0;
@@ -495,8 +613,12 @@ my @manual_devs = ();
 my $event_manager;
 
 sub say {
-    my ($level, @msg) = @_;
-    print @msg, "\n";
+    my ($error, @msg) = @_;
+    if ($error) {
+        print STDERR @msg, "\n";
+    } else {
+        print STDOUT @msg, "\n";
+    }
 }
 
 # install signal handlers
@@ -511,18 +633,7 @@ my $result = GetOptions ("help|h"     => \$help,
                          "table|t=s"  => \$table_file);
 
 if ($help || not $result) {
-    say 1, "Error parsing command line." unless $result;
-    say 1, "Magmakeys ".VERSION;
-    say 1, "  --help              Display this help";
-    say 1, "  --config | -c       Specify config file to read hotkey definitions from";
-    say 1, "  --hal               Use HAL to detect input devices (default)";
-    say 1, "  --nohal             Do not use HAL but listen to specified devices";
-    say 1, "  --dev | -d          Manually specify input device";
-    say 1, "  --dump              Dump captured events";
-    say 1, "  --table | -t        File containing event code table (default /usr/share/magmakeys/eventcodes.txt)";
-    say 1, "";
-    say 1, "Additional arguments are considered input device names.";
-    exit not $result;
+    showHelp("", not $help);
 }
 
 # additional arguments not touched by Getopt are considered input devices
@@ -531,8 +642,7 @@ for my $d (@ARGV) {
 }
 
 if (@manual_devs && $use_hal) {
-    say 1, "HAL and manually specified devices are mutually exclusive.";
-    exit 1;
+    showHelp("HAL and manually specified devices are mutually exclusive.", 1);
 }
 
 # load constants from file
@@ -569,8 +679,7 @@ if ($config_file) {
         exit 1;
     }
 } elsif (not $dump_events) {
-    say 1, "A config file or --dump is required. Nothing to do, quitting.";
-    exit 1;
+    showHelp("Either --config or --dump is required. Nothing to do, quitting.", 1);
 }
 
 $watcher->watch();
