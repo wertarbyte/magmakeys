@@ -489,7 +489,9 @@ sub showHelp {
         }
 
         # register hotplug callback
-        $manager->connect_to_signal("DeviceAdded", sub {$self->cb_device_added(shift)} );
+        # sometimes devices disappear before we can investigate - therefore we place
+        # the method in an eval block
+        $manager->connect_to_signal("DeviceAdded", sub {eval{ $self->cb_device_added(shift) }} );
 
         # start main loop
         $self->{REACTOR}->run();
@@ -616,6 +618,7 @@ sub showHelp {
         if (defined $cmd) {
             print "Launching command '",$cmd, "'\n";
             if (fork() == 0) {
+                $SIG{CHLD} = undef;
                 exec($cmd);
             }
         }
