@@ -469,7 +469,7 @@ sub showHelp {
                     $cap eq "input.keypad" ||
                     $cap eq "input.keys" ||
                     $cap eq "input.switch" ||
-                    $cap eq "buttons") {
+                    $cap eq "button") {
 
                     # add it to our watch list
                     $self->add_filehandle(new DeviceFile($props->{"input.device"}));
