@@ -570,7 +570,7 @@ sub showHelp {
         my $value = shift;
         my $cmd = shift;
         
-        $self->{HANDLERS}{$event_name}{$value} = $cmd;
+        push @{ $self->{HANDLERS}{$event_name}{$value} }, $cmd;
     }
 
     sub press {
@@ -598,9 +598,10 @@ sub showHelp {
         my $self = shift;
         my $event = shift;
         
-        my $cmd = undef;
+        my $cmds = undef;
 
         if ($event->type_description eq "EV_KEY") {
+            # handle multiple pressed keys by joing their names
             my $state_string;
             if ($event->value == 1) {
                 $self->press($event->name);
@@ -611,15 +612,17 @@ sub showHelp {
             } elsif ($event->value == 2) {
                 $state_string = join("+", $self->state);
             }
-            $cmd = $self->{HANDLERS}{$state_string}{$event->value};
+            $cmds = $self->{HANDLERS}{$state_string}{$event->value};
         } else {
-            $cmd = $self->{HANDLERS}{$event->name}{$event->value};
+            $cmds = $self->{HANDLERS}{$event->name}{$event->value};
         }
-        if (defined $cmd) {
-            print "Launching command '",$cmd, "'\n";
-            if (fork() == 0) {
-                $SIG{CHLD} = undef;
-                exec($cmd);
+        if (defined $cmds && ref $cmds) {
+            for my $cmd (@$cmds) {
+                print "Launching command '", $cmd, "'\n";
+                if (fork() == 0) {
+                    $SIG{CHLD} = undef;
+                    exec($cmd);
+                }
             }
         }
     }
