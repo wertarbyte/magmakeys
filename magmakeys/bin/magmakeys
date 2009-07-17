@@ -547,6 +547,23 @@ sub showHelp {
         }
         $fh->close();
     }
+
+    sub launch_command {
+        my $self = shift;
+        my $cmd = shift;
+        my $event = shift;
+        print "Launching command '", $cmd, "'\n";
+        if (fork() == 0) {
+            $SIG{CHLD} = undef;
+            # set up environment
+            if ($event) {
+                $ENV{EVENT_TYPE} = $event->type_description;
+                $ENV{EVENT_NAME} = $event->name;
+                $ENV{EVENT_VALUE} = $event->value;
+            }
+            exec($cmd);
+        }
+    }
 }
 
 {
@@ -618,14 +635,50 @@ sub showHelp {
         }
         if (defined $cmds && ref $cmds) {
             for my $cmd (@$cmds) {
-                print "Launching command '", $cmd, "'\n";
-                if (fork() == 0) {
-                    $SIG{CHLD} = undef;
-                    exec($cmd);
-                }
+                $self->launch_command($cmd, $event);
             }
         }
     }
+}
+
+{
+    package EventDirectoryManager;
+    our @ISA = ("EventHandlerManager");
+    
+    sub new {
+        my $proto = shift;
+        my $class = ref($proto) || $proto;
+        my $basedir = shift;
+        
+        my $self = $class->SUPER::new();
+
+        $self->{event_directory} = $basedir;
+
+        bless($self, $class);
+    }
+
+    sub handle_event {
+        my $self = shift;
+        my $event = shift;
+        
+        my $dir = $self->{event_directory}."/".$event->name;
+
+        return unless ( -d $dir );
+
+        foreach my $f ( <$dir/*> ) {
+            my $scriptname = substr($f,length($dir)+1);
+            next unless ( $scriptname =~ /^[a-z0-9]+$/ || 
+                          $scriptname =~ /^_?([a-z0-9_.]+-)+[a-z0-9]+$/ || 
+                          $scriptname =~ /^[a-z0-9][a-z0-9-]*$/ );
+            next if ($scriptname =~ /\.dpkg-(?:dist|new|old|tmp)$/ ||
+                     $scriptname =~ /\.disabled$/);
+
+            next unless ( -x $f);
+
+            $self->launch_command( $f, $event );
+        }
+    }
+
 }
 
 use Getopt::Long;
@@ -635,6 +688,7 @@ my $use_hal = 1;
 my $help = 0;
 my $dump_events = 0;
 my $config_file = undef;
+my $event_dir = undef;
 my $table_file = "/usr/share/magmakeys/eventcodes.txt";
 my @manual_devs = ();
 
@@ -656,6 +710,7 @@ $SIG{CHLD} = "IGNORE";
 my $result = GetOptions ("help|h"     => \$help,
                          "hal!"       => \$use_hal,
                          "dump"       => \$dump_events,
+                         "eventdir|e=s" => \$event_dir,
                          "dev|d=s"    => \@manual_devs,
                          "config|c=s" => \$config_file,
                          "table|t=s"  => \$table_file);
@@ -699,6 +754,7 @@ $watcher->dump($dump_events);
 $event_manager = new KeyboardManager();
 $watcher->add_listener($event_manager);
 
+
 if ($config_file) {
     my $success = $event_manager->read_handlers_from_file($config_file);
 
@@ -706,8 +762,14 @@ if ($config_file) {
         say 1, "Error reading config file '$config_file'";
         exit 1;
     }
-} elsif (not $dump_events) {
-    showHelp("Either --config or --dump is required. Nothing to do, quitting.", 1);
+}
+
+if ($event_dir) {
+    $watcher->add_listener( new EventDirectoryManager($event_dir) );
+}
+
+unless ( $dump_events || defined $config_file || defined $event_dir) {
+    showHelp("Either --config, --eventdir or --dump is required. Nothing to do, quitting.", 1);
 }
 
 $watcher->watch();
