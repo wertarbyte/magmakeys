@@ -13,7 +13,7 @@
 # like wireless or suspend controls that usually
 # are not user specific
 
-use constant VERSION => "0.3.2";
+use constant VERSION => "0.4.0";
 
 use strict;
 
@@ -45,7 +45,12 @@ Shows usage instructions
 =item B<--config> F<configfile> | B<-c> F<configfile>
 
 Read I<configfile> with hotkey definitions
-(mandatory when not using B<--dump>)
+(mandatory when not using B<--dump> or B<--eventdir>)
+
+=item B<--eventdir> F<directory> | B<-e> F<directory>
+
+Use I<directory> as a source for event handler scripts
+(mandatory when not using B<--dump> or B<--config>)
 
 =item B<--hal>
 
@@ -71,6 +76,8 @@ Additional command line arguments are considered filenames of input devices.
 
 =head1 CONFIGURATION
 
+=head2 File based hotkeys
+
 The hotkey bindings used by Magmakeys are set in the configuration file F</etc/magmakeys.conf>. Each line consists of three segments:
 The symbolic name of the event to react to, the value carried by the expected event, and of course the command to be launched.
 
@@ -81,6 +88,74 @@ Key events carry the value I<1> for a key being pressed and transmit the payload
 The command can include any number of arguments. Please include the full path to avoid trouble through different $PATH settings for the daemon and your interactive session.
 
 The three fields are seperated by an arbitrary number of whitespaces, while anything behind a # character is ignored and considered a comment.
+
+=head2 Directory based hotkeys
+
+An alternative to using a single configuration file is the event directory; if enabled with a proper base value (e.g. F</etc/magmakeys/events>), magmakeys will check various subdirectories for scripts to execute. An event with the type I<TYPE>, the name I<NAME> and the value <VALUE> will trigger the search for executables in the following directories below the specified base directory:
+
+=over
+
+=item F<I<BASE>/I<TYPE>>
+
+(e.g. F</etc/magmakeys/events/EV_KEY/>)
+
+=item F<I<BASE>/I<NAME>>
+
+(e.g. F</etc/magmakeys/events/KEY_RADIO/>)
+
+=item F<I<BASE>/I<NAME>/I<VALUE>>
+
+(e.g. F</etc/magmakeys/events/EV_KEY/>)
+
+=item F<I<BASE>/I<TYPE>/I<NAME>>
+
+(e.g. F</etc/magmakeys/events/EV_KEY/KEY_RADIO/>)
+
+=item F<I<BASE>/I<TYPE>/I<NAME>/I<VALUE>>
+
+(e.g. F</etc/magmakeys/events/EV_KEY/KEY_RADIO/1>)
+
+=back
+
+Scripts found in these directories are executed with no particular order. For a script to be executed, the following criteria have to be met:
+
+=over
+
+=item *
+
+The script is placed in a directory searched by the wanted device handler
+
+=item *
+
+The script is marked executable
+
+=item *
+
+The script meets the naming convention of L<run-parts>
+
+=item *
+
+The script name does not end in F<.disabled> or F<.dpkg-*>
+
+=back
+
+Various aspects of the triggering event are exported to environment variables:
+
+=over
+
+=item C<EVENT_TYPE>
+
+The type of the event, for example "EV_KEY" or "EV_SW".
+
+=item C<EVENT_NAME>
+
+The name of the event, for example "KEY_POWER" or "SW_LID".
+
+=item C<EVENT_VALUE>
+
+The numeric value of the event
+
+=back
 
 =head1 EXAMPLE
 
@@ -98,7 +173,7 @@ B<magmakeys --dump --nohal /dev/input/event5 /dev/input/event6>
 
 Disable the use of HAL and only dump events from the two devices specified
 
-=head2 configuration file
+=head2 Configuration file
 
 Any number of event handlers can be placed in the configuration file:
 
@@ -508,20 +583,84 @@ sub showHelp {
         my $proto = shift;
         my $class = ref($proto) || $proto;
         my $self = {};
-        
-        $self->{HANDLERS} = {};
+        $self->{"keys"} = {};
         
         bless($self, $class);
     }
+    
+    sub press_key {
+        my $self = shift;
+        my $key = shift;
 
+        $self->{"keys"}{$key}++;
+    }
+
+    sub release_key {
+        my $self = shift;
+        my $key = shift;
+        $self->{"keys"}{$key}--;
+        unless ($self->{"keys"}{$key} > 0) {
+            delete $self->{"keys"}{$key};
+        }
+    }
+
+    sub pressed_keys {
+        my $self = shift;
+        return sort keys %{$self->{keys}};
+    }
+
+    sub handle_event {
+        my ($self, $event) = @_;
+        if ($event->type_description eq "EV_KEY") {
+            # handle multiple pressed keys by joing their names
+            if ($event->value == 1) {
+                $self->press_key($event->name);
+            } elsif ($event->value == 0) {
+                $self->release_key($event->name);
+            }
+        }
+    }
+
+   sub launch_command {
+        my $self = shift;
+        my $cmd = shift;
+        my $event = shift;
+        print "Launching command '", $cmd, "'\n";
+        if (fork() == 0) {
+            $SIG{CHLD} = undef;
+            # set up environment
+            if ($event) {
+                $ENV{EVENT_TYPE} = $event->type_description;
+                $ENV{EVENT_NAME} = $event->name;
+                $ENV{EVENT_VALUE} = $event->value;
+                # FIXME transport both the old and the new state
+                $ENV{PRESSED_KEYS} = join("+", $self->pressed_keys);
+            }
+            exec($cmd);
+        }
+    }
+}
+
+{
+    package EventFileManager;
+    our @ISA = ("EventHandlerManager");
+
+    sub new {
+        my $proto = shift;
+        my $class = ref($proto) || $proto;
+        
+        my $self = $class->SUPER::new();
+
+        $self->{"keys"} = {};
+        $self->{"HANDLERS"} = {};
+
+        bless($self, $class);
+    }
+    
     sub flush_handlers {
         my $self = shift;
         $self->{HANDLERS} = {};
     }
-
-    sub add_handler {}
-
-    sub handle_event {}
 
     sub read_handlers_from_file {
         my $self = shift;
@@ -547,40 +686,7 @@ sub showHelp {
         }
         $fh->close();
     }
-
-    sub launch_command {
-        my $self = shift;
-        my $cmd = shift;
-        my $event = shift;
-        print "Launching command '", $cmd, "'\n";
-        if (fork() == 0) {
-            $SIG{CHLD} = undef;
-            # set up environment
-            if ($event) {
-                $ENV{EVENT_TYPE} = $event->type_description;
-                $ENV{EVENT_NAME} = $event->name;
-                $ENV{EVENT_VALUE} = $event->value;
-            }
-            exec($cmd);
-        }
-    }
-}
-
-{
-    package KeyboardManager;
-    our @ISA = ("EventHandlerManager");
-
-    sub new {
-        my $proto = shift;
-        my $class = ref($proto) || $proto;
-        
-        my $self = $class->SUPER::new();
-
-        $self->{"keys"} = {};
-
-        bless($self, $class);
-    }
-
+ 
     sub add_handler {
         my $self = shift;
         my $event_name = shift;
@@ -590,26 +696,6 @@ sub showHelp {
         push @{ $self->{HANDLERS}{$event_name}{$value} }, $cmd;
     }
 
-    sub press {
-        my $self = shift;
-        my $key = shift;
-
-        $self->{"keys"}{$key}++;
-    }
-
-    sub release {
-        my $self = shift;
-        my $key = shift;
-        $self->{"keys"}{$key}--;
-        unless ($self->{"keys"}{$key} > 0) {
-            delete $self->{"keys"}{$key};
-        }
-    }
-
-    sub state {
-        my $self = shift;
-        return sort keys %{$self->{keys}};
-    }
 
     sub handle_event {
         my $self = shift;
@@ -621,13 +707,13 @@ sub showHelp {
             # handle multiple pressed keys by joing their names
             my $state_string;
             if ($event->value == 1) {
-                $self->press($event->name);
-                $state_string = join("+", $self->state);
+                $self->press_key($event->name);
+                $state_string = join("+", $self->pressed_keys);
             } elsif ($event->value == 0) {
-                $state_string = join("+", $self->state);
-                $self->release($event->name);
+                $state_string = join("+", $self->pressed_keys);
+                $self->release_key($event->name);
             } elsif ($event->value == 2) {
-                $state_string = join("+", $self->state);
+                $state_string = join("+", $self->pressed_keys);
             }
             $cmds = $self->{HANDLERS}{$state_string}{$event->value};
         } else {
@@ -657,25 +743,43 @@ sub showHelp {
         bless($self, $class);
     }
 
+    sub get_directories {
+        my ($self, $event) = @_;
+        my $b  = $self->{event_directory};
+        my $en = $event->name;
+        my $et = $event->type_description;
+        my $v  = $event->value;
+        return map { $b."/".$_ } (
+            "$en",              # KEY_RADIO
+            "$en/$v",           # KEY_RADIO/1
+            "$et",              # EV_KEY
+            "$et/$en",          # EV_KEY/KEY_RADIO
+            "$et/$en/$v"        # EV_KEY/KEY_RADIO/1
+        );
+    }
+
     sub handle_event {
         my $self = shift;
         my $event = shift;
+
+        $self->SUPER::handle_event($event);
         
-        my $dir = $self->{event_directory}."/".$event->name;
+        for my $dir ( $self->get_directories($event) ) {
+            print "Checking $dir\n";
+            next unless ( -d $dir );
 
-        return unless ( -d $dir );
+            foreach my $f ( <$dir/*> ) {
+                my $scriptname = substr($f,length($dir)+1);
+                next unless ( $scriptname =~ /^[a-z0-9]+$/ || 
+                              $scriptname =~ /^_?([a-z0-9_.]+-)+[a-z0-9]+$/ || 
+                              $scriptname =~ /^[a-z0-9][a-z0-9-]*$/ );
+                next if ($scriptname =~ /\.dpkg-(?:dist|new|old|tmp)$/ ||
+                         $scriptname =~ /\.disabled$/);
 
-        foreach my $f ( <$dir/*> ) {
-            my $scriptname = substr($f,length($dir)+1);
-            next unless ( $scriptname =~ /^[a-z0-9]+$/ || 
-                          $scriptname =~ /^_?([a-z0-9_.]+-)+[a-z0-9]+$/ || 
-                          $scriptname =~ /^[a-z0-9][a-z0-9-]*$/ );
-            next if ($scriptname =~ /\.dpkg-(?:dist|new|old|tmp)$/ ||
-                     $scriptname =~ /\.disabled$/);
+                next unless ( -x $f);
 
-            next unless ( -x $f);
-
-            $self->launch_command( $f, $event );
+                $self->launch_command( $f, $event );
+            }
         }
     }
 
@@ -751,7 +855,7 @@ if ($use_hal) {
 }
 $watcher->dump($dump_events);
 
-$event_manager = new KeyboardManager();
+$event_manager = new EventFileManager();
 $watcher->add_listener($event_manager);
 
 

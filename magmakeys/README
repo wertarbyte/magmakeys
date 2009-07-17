@@ -2,7 +2,7 @@
  - hot keys, but nearer to the core -
 
 by Stefan Tomanek <stefan@pico.ruhr.de>
-http://stefans.datenbruch.de/magmakeys/
+http://wertarbyte.de/magmakeys/
 
 Magmakeys is a system wide hotkey daemon. It watches all connected input
 devices for key and switch events and can launch arbitrary commands when
@@ -19,7 +19,7 @@ newly connected ones. This functionality however is optional and can be disabled
 should you choose to refrain from HAL and DBUS.
 
 For more information about the use and configuration of the daemon, consult
-"magmakeys --help" and the provided example configuration file.
+"magmakeys --help", the example configuration files and the provided manual page.
 
 The file share/eventcodes.txt should be placed in the directory /usr/share/magmakeys/,
 where it will be found by the magmakeys program. If placed elsewhere, its location can
