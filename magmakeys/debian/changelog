@@ -1,3 +1,9 @@
+magmakeys (0.4.0) unstable; urgency=low
+
+  * added support for event handler directories
+
+ -- Stefan Tomanek <stefan@pico.ruhr.de>  Sat, 18 Jul 2009 00:02:53 +0200
+
 magmakeys (0.3.2) unstable; urgency=low
 
   * added documentation
