@@ -54,7 +54,7 @@ install: build
 	#$(MAKE) DESTDIR=$(CURDIR)/debian/magmakeys install
 	install -D $(CURDIR)/bin/magmakeys $(CURDIR)/debian/magmakeys/usr/sbin/magmakeys
 	install -D $(CURDIR)/share/eventcodes.txt $(CURDIR)/debian/magmakeys/usr/share/magmakeys/eventcodes.txt
-	install -D $(CURDIR)/debian/magmakeys-stub.conf $(CURDIR)/debian/magmakeys/etc/magmakeys.conf
+	install -D $(CURDIR)/examples/conf.d/example $(CURDIR)/debian/magmakeys/etc/magmakeys/conf.d/example
 	#install -D $(CURDIR)/initscript/magmakeys $(CURDIR)/debian/etc/init.d/
 
 # Build architecture-independent files here.
