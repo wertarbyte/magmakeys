@@ -2,7 +2,7 @@
 #
 # magmakeys
 # by Stefan Tomanek <stefan@pico.ruhr.de>
-# http://stefans.datenbruch.de/magmakeys/
+# http://wertarbyte.de/magmakeys/
 # 
 # Magmakey is a system wide hotkey daemon.
 # It watches all connected input devices for
