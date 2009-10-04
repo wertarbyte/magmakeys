@@ -1,3 +1,9 @@
+magmakeys (0.5.0) unstable; urgency=low
+
+  * added support for conf.d/ hotkey configuration
+
+ -- Stefan Tomanek <stefan.tomanek@wertarbyte.de>  Sun, 04 Oct 2009 22:43:16 +0200
+
 magmakeys (0.4.0) unstable; urgency=low
 
   * added support for event handler directories
