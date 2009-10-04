@@ -42,7 +42,7 @@ like volume or wifi control; it works independently from a specific user being l
 
 Shows usage instructions
 
-=item B<--config> F<directory> | B<-c> F<directory>
+=item B<--configdir> F<directory> | B<-c> F<directory>
 
 Read configuration files from F<directory>
 (mandatory when not using B<--dump> or B<--eventdir>)
@@ -50,7 +50,7 @@ Read configuration files from F<directory>
 =item B<--eventdir> F<directory> | B<-e> F<directory>
 
 Use I<directory> as a source for event handler scripts
-(mandatory when not using B<--dump> or B<--config>)
+(mandatory when not using B<--dump> or B<--configdir>)
 
 =item B<--hal>
 
@@ -818,8 +818,7 @@ my $result = GetOptions ("help|h"     => \$help,
                          "dump"       => \$dump_events,
                          "eventdir|e=s" => \$event_dir,
                          "dev|d=s"    => \@manual_devs,
-                         "config|c=s" => \$config_file,
-                         "confdir=s"  => \$config_dir,
+                         "confdir|c=s" => \$config_dir,
                          "table|t=s"  => \$table_file);
 
 if ($help || not $result) {
@@ -882,21 +881,12 @@ if ($config_dir) {
     }
 }
 
-if ($config_file) {
-    my $success = $event_manager->read_handlers_from_file($config_file);
-
-    unless ($success) {
-        say 1, "Error reading config file '$config_file'";
-        exit 1;
-    }
-}
-
 if ($event_dir) {
     $watcher->add_listener( new EventDirectoryManager($event_dir) );
 }
 
-unless ( $dump_events || defined $config_file || defined $config_dir || defined $event_dir) {
-    showHelp("Either --config, --configdir, --eventdir or --dump is required. Nothing to do, quitting.", 1);
+unless ( $dump_events || defined $config_dir || defined $event_dir) {
+    showHelp("Either --configdir, --eventdir or --dump is required. Nothing to do, quitting.", 1);
 }
 
 $watcher->watch();
