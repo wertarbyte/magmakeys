@@ -818,7 +818,7 @@ my $result = GetOptions ("help|h"     => \$help,
                          "dump"       => \$dump_events,
                          "eventdir|e=s" => \$event_dir,
                          "dev|d=s"    => \@manual_devs,
-                         "confdir|c=s" => \$config_dir,
+                         "configdir|c=s" => \$config_dir,
                          "table|t=s"  => \$table_file);
 
 if ($help || not $result) {
