@@ -233,6 +233,27 @@ sub showHelp {
 }
 
 {
+    package EventDumper;
+
+    sub new {
+        my $proto = shift;
+        my $class = ref($proto) || $proto;
+
+        my $self = {};
+        $self->{DUMP} = 0;
+
+        bless( $self, $class );
+    }
+    
+    # dump received events?
+    sub dump {
+        my $self = shift;
+        $self->{DUMP} = shift if (@_);
+        return $self->{DUMP};
+    }
+}
+
+{
     # Event class
     package InputEvent;
     require IO::File;
@@ -387,23 +408,17 @@ sub showHelp {
 
 {
     package DeviceWatcher;
+    our @ISA = ("EventDumper");
+
     # abstract class
     sub new {
         my $proto = shift;
         my $class = ref($proto) || $proto;
-        my $self = {};
-        $self->{DUMP} = 0;
+        my $self = $class->SUPER::new();
 
         $self->{LISTENERS} = [];
 
         bless( $self, $class );
-    }
-
-    # dump received events?
-    sub dump {
-        my $self = shift;
-        $self->{DUMP} = shift if (@_);
-        return $self->{DUMP};
     }
 
     sub add_listener {
@@ -578,12 +593,13 @@ sub showHelp {
 
 {
     package EventHandlerManager;
+    our @ISA = ("EventDumper");
     require IO::File;
 
     sub new {
         my $proto = shift;
         my $class = ref($proto) || $proto;
-        my $self = {};
+        my $self = $class->SUPER::new();
         $self->{"keys"} = {};
         
         bless($self, $class);
@@ -716,6 +732,9 @@ sub showHelp {
             } elsif ($event->value == 2) {
                 $state_string = join("+", $self->pressed_keys);
             }
+            if ($self->dump) {
+                print "Key state: $state_string (", $event->value, ")\n";
+            }
             $cmds = $self->{HANDLERS}{$state_string}{$event->value};
         } else {
             $cmds = $self->{HANDLERS}{$event->name}{$event->value};
@@ -766,7 +785,7 @@ sub showHelp {
         $self->SUPER::handle_event($event);
         
         for my $dir ( $self->get_directories($event) ) {
-            print "Checking $dir\n";
+            print "Checking event directory: $dir\n" if $self->dump;
             next unless ( -d $dir );
 
             foreach my $f ( <$dir/*> ) {
@@ -858,6 +877,7 @@ if ($use_hal) {
 $watcher->dump($dump_events);
 
 $event_manager = new EventFileManager();
+$event_manager->dump($dump_events);
 $watcher->add_listener($event_manager);
 
 if ($config_dir) {
@@ -882,7 +902,9 @@ if ($config_dir) {
 }
 
 if ($event_dir) {
-    $watcher->add_listener( new EventDirectoryManager($event_dir) );
+    my $ed_manager = new EventDirectoryManager($event_dir);
+    $ed_manager->dump($dump_events);
+    $watcher->add_listener($ed_manager);
 }
 
 unless ( $dump_events || defined $config_dir || defined $event_dir) {
