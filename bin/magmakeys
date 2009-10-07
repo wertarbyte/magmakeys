@@ -432,6 +432,8 @@ sub showHelp {
     sub remove_filehandle { }
     # start main loop
     sub watch { }
+    # restart main loop
+    sub reload { }
 
     # read an event from a given filehandle and process it
     sub process_filehandle {
@@ -497,6 +499,12 @@ sub showHelp {
             return unless $sel->count > 0;
         }
     }
+
+    sub reload {
+        my $self = shift;
+        $self->watch();
+    }
+
     1;
 }
 
@@ -588,6 +596,12 @@ sub showHelp {
         $self->{REACTOR}->run();
     }
 
+    sub reload {
+        my $self = shift;
+        $self->{REACTOR}->shutdown();
+        $self->{REACTOR}->run();
+    }
+
     1;
 }
 
@@ -645,6 +659,7 @@ sub showHelp {
         print "Launching command '", $cmd, "'\n";
         if (fork() == 0) {
             $SIG{CHLD} = undef;
+            $SIG{HUP} = undef;
             # set up environment
             if ($event) {
                 $ENV{EVENT_TYPE} = $event->type_description;
@@ -818,6 +833,7 @@ my $table_file = "/usr/share/magmakeys/eventcodes.txt";
 my @manual_devs = ();
 
 my $event_manager;
+my $watcher;
 
 sub say {
     my ($error, @msg) = @_;
@@ -830,6 +846,8 @@ sub say {
 
 sub signal_hup {
     print "SIGHUP\n";
+    # TODO reload config (reopen devices?)
+    $watcher->reload() if defined $watcher;
 }
 
 # install signal handlers
@@ -864,7 +882,6 @@ unless ( InputEvent->load_constants($table_file) ) {
     exit 1;
 }
 
-my $watcher = undef;
 if ($use_hal) {
     $watcher = new DBusDeviceWatcher();
 } else {
