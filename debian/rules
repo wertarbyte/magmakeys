@@ -30,6 +30,7 @@ build-stamp: configure-stamp
 	#$(MAKE)
 	#docbook-to-man debian/magmakeys.sgml > magmakeys.1
 	pod2man --center "" -r "" -s 1 bin/magmakeys > debian/magmakeys.1
+        cat initscript/magmakeys > debian/magmakeys.init
 
 	touch $@
 
