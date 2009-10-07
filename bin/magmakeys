@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 #
 # magmakeys
-# by Stefan Tomanek <stefan.tomanek@wertarbyte.de>
+# by Stefan Tomanek <stefan@pico.ruhr.de>
 # http://wertarbyte.de/magmakeys/
 # 
 # Magmakey is a system wide hotkey daemon.
