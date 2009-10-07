@@ -841,6 +841,7 @@ sub signal_hup {
     say 0, "SIGHUP received, reloading configuration";
     
     # TODO reload config (reopen devices?)
+    load_config();
     
     # restart device watcher
     $watcher->watch();
@@ -898,26 +899,30 @@ $event_manager = new EventFileManager();
 $event_manager->dump($dump_events);
 $watcher->add_listener($event_manager);
 
-if ($config_dir) {
-    # load all config files from the directory
-    unless ( -d $config_dir ) {
-        say 1, "Error reading config directory '$config_dir'";
-    }
+sub load_config {
+    $event_manager->flush_handlers();
+    if ($config_dir) {
+        # load all config files from the directory
+        unless ( -d $config_dir ) {
+            say 1, "Error reading config directory '$config_dir'";
+        }
 
-    foreach my $c ( <$config_dir/*> ) {
-        my $confname = substr($c,length($config_dir)+1);
-        next unless ( $confname =~ /^[a-z0-9]+$/ || 
-                      $confname =~ /^_?([a-z0-9_.]+-)+[a-z0-9]+$/ || 
-                      $confname =~ /^[a-z0-9][a-z0-9-]*$/ );
-        next if ($confname =~ /\.dpkg-(?:dist|new|old|tmp)$/ ||
-                 $confname =~ /\.disabled$/);
-        say 0, "Loading config file '$c'";
-        my $success = $event_manager->read_handlers_from_file($c);
-        unless ($success) {
-            say 1, "Error reading config file '$config_file'";
+        foreach my $c ( <$config_dir/*> ) {
+            my $confname = substr($c,length($config_dir)+1);
+            next unless ( $confname =~ /^[a-z0-9]+$/ || 
+                          $confname =~ /^_?([a-z0-9_.]+-)+[a-z0-9]+$/ || 
+                          $confname =~ /^[a-z0-9][a-z0-9-]*$/ );
+            next if ($confname =~ /\.dpkg-(?:dist|new|old|tmp)$/ ||
+                     $confname =~ /\.disabled$/);
+            say 0, "Loading config file '$c'";
+            my $success = $event_manager->read_handlers_from_file($c);
+            unless ($success) {
+                say 1, "Error reading config file '$config_file'";
+            }
         }
     }
 }
+load_config();
 
 if ($event_dir) {
     my $ed_manager = new EventDirectoryManager($event_dir);
