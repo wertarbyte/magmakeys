@@ -1,7 +1,7 @@
   Magmakeys
  - hot keys, but nearer to the core -
 
-by Stefan Tomanek <stefan.tomanek@wertarbyte.de>
+by Stefan Tomanek <stefan@pico.ruhr.de>
 http://wertarbyte.de/magmakeys/
 
 Magmakeys is a system wide hotkey daemon. It watches all connected input
