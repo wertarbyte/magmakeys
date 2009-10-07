@@ -432,8 +432,6 @@ sub showHelp {
     sub remove_filehandle { }
     # start main loop
     sub watch { }
-    # restart main loop
-    sub reload { }
 
     # read an event from a given filehandle and process it
     sub process_filehandle {
@@ -500,11 +498,6 @@ sub showHelp {
         }
     }
 
-    sub reload {
-        my $self = shift;
-        $self->watch();
-    }
-
     1;
 }
 
@@ -524,7 +517,24 @@ sub showHelp {
 
         $self->{REACTOR} = Net::DBus::Reactor->main;
 
+        $self->__init_reactor;
+
         bless($self, $class);
+    }
+
+    sub __init_reactor {
+        my $self = shift;
+        # get reference to HAL manager
+        my $manager = $self->{HAL}->get_object("/org/freedesktop/Hal/Manager", "org.freedesktop.Hal.Manager");
+        # add all existing devices
+        foreach my $id (@{$manager->GetAllDevices}) {
+            $self->cb_device_added($id);
+        }
+
+        # register hotplug callback
+        # sometimes devices disappear before we can investigate - therefore we place
+        # the method in an eval block
+        $manager->connect_to_signal("DeviceAdded", sub {eval{ $self->cb_device_added(shift) }} );
     }
 
 
@@ -581,24 +591,7 @@ sub showHelp {
 
     sub watch {
         my $self = shift;
-        my $manager = $self->{HAL}->get_object("/org/freedesktop/Hal/Manager", "org.freedesktop.Hal.Manager");
-        # add all existing devices
-        foreach my $id (@{$manager->GetAllDevices}) {
-            $self->cb_device_added($id);
-        }
-
-        # register hotplug callback
-        # sometimes devices disappear before we can investigate - therefore we place
-        # the method in an eval block
-        $manager->connect_to_signal("DeviceAdded", sub {eval{ $self->cb_device_added(shift) }} );
-
         # start main loop
-        $self->{REACTOR}->run();
-    }
-
-    sub reload {
-        my $self = shift;
-        $self->{REACTOR}->shutdown();
         $self->{REACTOR}->run();
     }
 
@@ -845,9 +838,12 @@ sub say {
 }
 
 sub signal_hup {
-    print "SIGHUP\n";
+    say 0, "SIGHUP received, reloading configuration";
+    
     # TODO reload config (reopen devices?)
-    $watcher->reload() if defined $watcher;
+    
+    # restart device watcher
+    $watcher->watch();
 }
 
 # install signal handlers
