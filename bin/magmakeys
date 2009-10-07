@@ -828,8 +828,13 @@ sub say {
     }
 }
 
+sub signal_hup {
+    print "SIGHUP\n";
+}
+
 # install signal handlers
 $SIG{CHLD} = "IGNORE";
+$SIG{HUP} = \&signal_hup;
 
 # parse command line
 my $result = GetOptions ("help|h"     => \$help,
