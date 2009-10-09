@@ -702,7 +702,7 @@ sub showHelp {
                 my ($ev, $values, $cmd) = ($1, $2, $3);
                 for my $val ( split(/,/, $values) ) {
                     unless ($self->add_handler($ev, $val, $cmd)) {
-                        print STDERR "Unknown to register event handler for event '$ev' and value '$val' (line $i)\n";
+                        print STDERR "Unable to register event handler for event '$ev' and value '$val' (line $i)\n";
                     }
                 }
             } else {
