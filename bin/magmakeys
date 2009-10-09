@@ -717,8 +717,11 @@ sub showHelp {
         my $event_name = shift;
         my $value = shift;
         my $cmd = shift;
+
+        # re-phrase event name to suit our sorting
+        my $sorted_event_name = join('+', sort split(/\+/, $event_name) );
         
-        push @{ $self->{HANDLERS}{$event_name}{$value} }, $cmd;
+        push @{ $self->{HANDLERS}{$sorted_event_name}{$value} }, $cmd;
     }
 
 
