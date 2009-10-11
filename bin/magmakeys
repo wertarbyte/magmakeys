@@ -404,6 +404,8 @@ sub showHelp {
         my $self = shift;
         return ${*$self}->{FILENAME};
     }
+
+    1;
 }
 
 {
@@ -664,6 +666,8 @@ sub showHelp {
             exec($cmd);
         }
     }
+
+    1;
 }
 
 {
@@ -724,7 +728,6 @@ sub showHelp {
         push @{ $self->{HANDLERS}{$sorted_event_name}{$value} }, $cmd;
     }
 
-
     sub handle_event {
         my $self = shift;
         my $event = shift;
@@ -756,6 +759,8 @@ sub showHelp {
             }
         }
     }
+
+    1;
 }
 
 {
@@ -814,6 +819,7 @@ sub showHelp {
         }
     }
 
+    1;
 }
 
 use Getopt::Long;
