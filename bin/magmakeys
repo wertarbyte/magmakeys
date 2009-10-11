@@ -25,7 +25,7 @@ magmakeys -- global hotkey event daemon
 
 =head1 SYNOPSIS
 
-B<magmakeys> [B<-c> I<configdir>] [B<-e> I<eventdir>] [B<--dump>] [B<-t> I<tablefile>] [B<--hal> | B<--nohal> [B<-d> I<device>] [I<devices...>]] 
+B<magmakeys> [B<-k> I<dir>] [B<-e> I<eventdir>] [B<--dump>] [B<-t> I<tablefile>] [B<--hal> | B<--nohal> [B<-d> I<device>] [I<devices...>]] 
 
 =head1 DESCRIPTION
 
@@ -42,9 +42,9 @@ like volume or wifi control; it works independently from a specific user being l
 
 Shows usage instructions
 
-=item B<--configdir> F<directory> | B<-c> F<directory>
+=item B<--keydir> F<directory> | B<-k> F<directory>
 
-Read configuration files from F<directory>
+Read key configuration files from F<directory>
 (mandatory when not using B<--dump> or B<--eventdir>)
 
 =item B<--eventdir> F<directory> | B<-e> F<directory>
@@ -78,7 +78,7 @@ Additional command line arguments are considered filenames of input devices.
 
 =head2 Key combination based handlers
 
-The hotkey bindings used by Magmakeys are set in the configuration files placed in the directory F</etc/magmakeys/conf.d/> (or any other directory specified by B<-c>). Each line consists of three segments:
+The hotkey bindings used by Magmakeys are set in the configuration files placed in the directory F</etc/magmakeys/keys.d/> (or any other directory specified by B<-k>). Each line consists of three segments:
 The symbolic name of the key combination or event name to react on, the value carried by the expected event, and of course the command to be launched.
 
 The event names are translated by looking up the kernel codes through the file F</usr/share/magmakeys/eventcodes.txt> (or any other file specified by B<-t>) and can be found by pressing the selected key while running magmakeys with the option B<--dump>.
@@ -166,9 +166,9 @@ B<magmakeys --hal --dump>
 
 Dump all events processable by magmakeys to the console; this is useful to find out the correct event name for a specific key.
 
-B<magmakeys -c /etc/magmakeys/conf.d/>
+B<magmakeys -k /etc/magmakeys/keys.d/>
 
-Retrieve the list of input devices from HAL (default) and react to events according to the configuration files placed in I</etc/magmakeys/conf.d/>.
+Retrieve the list of input devices from HAL (default) and react to events according to the configuration files placed in I</etc/magmakeys/keys.d/>.
 
 B<magmakeys --dump --nohal /dev/input/event5 /dev/input/event6>
 
@@ -178,7 +178,7 @@ Disable the use of HAL and only dump events from the two devices specified
 
 Any number of event handlers can be placed in the configuration file:
 
-    # /etc/magmakeys/conf.d/example
+    # /etc/magmakeys/keys.d/example
     #
     # Suspend the system
     KEY_SLEEP       1       /usr/sbin/hibernate-ram
@@ -195,7 +195,7 @@ Any number of event handlers can be placed in the configuration file:
 
 =over
 
-=item F</etc/magmakeys/conf.d/>
+=item F</etc/magmakeys/keys.d/>
 
 Configuration file directory for hotkey definitions
 
@@ -845,7 +845,7 @@ my $use_hal = 1;
 my $help = 0;
 my $dump_events = 0;
 my $config_file = undef;
-my $config_dir = undef;
+my $key_dir = undef;
 my $event_dir = undef;
 my $table_file = "/usr/share/magmakeys/eventcodes.txt";
 my @manual_devs = ();
@@ -882,7 +882,7 @@ my $result = GetOptions ("help|h"     => \$help,
                          "dump"       => \$dump_events,
                          "eventdir|e=s" => \$event_dir,
                          "dev|d=s"    => \@manual_devs,
-                         "configdir|c=s" => \$config_dir,
+                         "keydir|k=s" => \$key_dir,
                          "table|t=s"  => \$table_file);
 
 if ($help || not $result) {
@@ -926,14 +926,14 @@ $watcher->add_listener($event_manager);
 
 sub load_config {
     $event_manager->flush_handlers();
-    if ($config_dir) {
+    if (defined $key_dir) {
         # load all config files from the directory
-        unless ( -d $config_dir ) {
-            say 1, "Error reading config directory '$config_dir'";
+        unless ( -d $key_dir ) {
+            say 1, "Error reading key config directory '$key_dir'";
         }
 
-        foreach my $c ( <$config_dir/*> ) {
-            my $confname = substr($c,length($config_dir)+1);
+        foreach my $c ( <$key_dir/*> ) {
+            my $confname = substr($c,length($key_dir)+1);
             next unless ( $confname =~ /^[a-z0-9]+$/ || 
                           $confname =~ /^_?([a-z0-9_.]+-)+[a-z0-9]+$/ || 
                           $confname =~ /^[a-z0-9][a-z0-9-]*$/ );
@@ -955,8 +955,8 @@ if ($event_dir) {
     $watcher->add_listener($ed_manager);
 }
 
-unless ( $dump_events || defined $config_dir || defined $event_dir) {
-    showHelp("Either --configdir, --eventdir or --dump is required. Nothing to do, quitting.", 1);
+unless ( $dump_events || defined $key_dir || defined $event_dir) {
+    showHelp("Either --keydir, --eventdir or --dump is required. Nothing to do, quitting.", 1);
 }
 
 $watcher->watch();
