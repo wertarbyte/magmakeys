@@ -42,6 +42,7 @@ clean:
 	# Add here commands to clean up after the build process.
 	#$(MAKE) clean
 	rm debian/magmakeys.1 || true
+	rm debian/magmakeys.init || true
 
 	dh_clean 
 
