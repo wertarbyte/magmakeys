@@ -13,7 +13,7 @@
 # like wireless or suspend controls that usually
 # are not user specific
 
-use constant VERSION => "0.6.0";
+use constant VERSION => "0.6.1";
 
 use strict;
 

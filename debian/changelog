@@ -1,3 +1,13 @@
+magmakeys (0.6.1) unstable; urgency=low
+
+  * fixed typo in error message
+  * Added sorting of event handler names
+  * added true statements to the end of each class
+  * Added check after trying to open device files
+  * added product info from HAL to DeviceFile object
+
+ -- Stefan Tomanek <stefan@pico.ruhr.de>  Sun, 11 Oct 2009 13:35:07 +0200
+
 magmakeys (0.6.0) unstable; urgency=low
 
   * magmakeys now reloads its config on receiving SIGHUP
