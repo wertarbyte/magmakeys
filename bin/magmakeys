@@ -394,6 +394,7 @@ sub showHelp {
 
         my $filename = shift;
         my $self = $class->SUPER::new($filename, 'r');
+        return undef unless $self;
 
         ${*$self}->{FILENAME} = $filename;
 
@@ -583,7 +584,12 @@ sub showHelp {
                     $cap eq "button") {
 
                     # add it to our watch list
-                    $self->add_filehandle(new DeviceFile($props->{"input.device"}));
+                    my $device_file = new DeviceFile($props->{"input.device"});
+                    if ($device_file) {
+                        $self->add_filehandle($device_file);
+                    } else {
+                        print STDERR "Unable to open input device file ", $props->{"input.device"}, "\n";
+                    }
 
                     last;
                 }
