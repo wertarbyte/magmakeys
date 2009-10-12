@@ -13,7 +13,7 @@
 # like wireless or suspend controls that usually
 # are not user specific
 
-use constant VERSION => "0.6.1";
+use constant VERSION => "0.7.0";
 
 use strict;
 
@@ -266,7 +266,6 @@ sub say {
 sub signal_hup {
     say 0, "SIGHUP received, reloading configuration";
     
-    # TODO reload config (reopen devices?)
     load_config();
     
     # restart device watcher
