@@ -1,3 +1,12 @@
+magmakeys (0.7.0) unstable; urgency=low
+
+  * renamed /etc/magmakeys/conf.d/ to /etc/magmakeys/keys.d/
+    and argument -c/--configdir to -k/--keydir
+  * split daemon into library files and main program
+  * moved to version 0.7.0
+
+ -- Stefan Tomanek <stefan@pico.ruhr.de>  Mon, 12 Oct 2009 11:47:53 +0200
+
 magmakeys (0.6.1) unstable; urgency=low
 
   * fixed typo in error message
