@@ -57,7 +57,8 @@ install: build
 	install -D $(CURDIR)/bin/magmakeys $(CURDIR)/debian/magmakeys/usr/sbin/magmakeys
 	install -D $(CURDIR)/share/eventcodes.txt $(CURDIR)/debian/magmakeys/usr/share/magmakeys/eventcodes.txt
 	install -D $(CURDIR)/examples/keys.d/example $(CURDIR)/debian/magmakeys/etc/magmakeys/keys.d/example
-	#install -D $(CURDIR)/initscript/magmakeys $(CURDIR)/debian/etc/init.d/
+	mkdir -p $(CURDIR)/debian/magmakeys/usr/share/perl5/magmakeys
+	install $(CURDIR)/lib/magmakeys/*.pm -t $(CURDIR)/debian/magmakeys/usr/share/perl5/magmakeys
 
 # Build architecture-independent files here.
 binary-indep: install
