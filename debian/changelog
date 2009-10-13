@@ -1,3 +1,9 @@
+magmakeys (0.7.0-1) unstable; urgency=low
+
+  * switched to new debhelper system
+
+ -- Stefan Tomanek <stefan@pico.ruhr.de>  Tue, 13 Oct 2009 15:04:20 +0200
+
 magmakeys (0.7.0) unstable; urgency=low
 
   * renamed /etc/magmakeys/conf.d/ to /etc/magmakeys/keys.d/
