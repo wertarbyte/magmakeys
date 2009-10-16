@@ -13,7 +13,7 @@
 # like wireless or suspend controls that usually
 # are not user specific
 
-use constant VERSION => "0.7.0";
+use constant VERSION => "0.7.1";
 
 use strict;
 
@@ -25,7 +25,7 @@ magmakeys -- global hotkey event daemon
 
 =head1 SYNOPSIS
 
-B<magmakeys> [B<-k> I<dir>] [B<-e> I<eventdir>] [B<--dump>] [B<-t> I<tablefile>] [B<--hal> | B<--nohal> [B<-d> I<device>] [I<devices...>]] 
+B<magmakeys> [B<-k> I<dir>] [B<--dump>] [B<-t> I<tablefile>] [B<--hal> | B<--nohal> [B<-d> I<device>] [I<devices...>]] 
 
 =head1 DESCRIPTION
 
@@ -45,12 +45,7 @@ Shows usage instructions
 =item B<--keydir> F<directory> | B<-k> F<directory>
 
 Read key configuration files from F<directory>
-(mandatory when not using B<--dump> or B<--eventdir>)
-
-=item B<--eventdir> F<directory> | B<-e> F<directory>
-
-Use I<directory> as a source for event handler scripts
-(mandatory when not using B<--dump> or B<--configdir>)
+(mandatory when not using B<--dump>)
 
 =item B<--hal>
 
@@ -76,7 +71,7 @@ Additional command line arguments are considered filenames of input devices.
 
 =head1 CONFIGURATION
 
-=head2 Key combination based handlers
+=head2 Handling key combinations and switch state changes
 
 The hotkey bindings used by Magmakeys are set in the configuration files placed in the directory F</etc/magmakeys/keys.d/> (or any other directory specified by B<-k>). Each line consists of three segments:
 The symbolic name of the key combination or event name to react on, the value carried by the expected event, and of course the command to be launched.
@@ -88,75 +83,6 @@ Key events carry the value I<1> for a key being pressed and transmit the payload
 The command can include any number of arguments. Please include the full path to avoid trouble through different $PATH settings for the daemon and your interactive session.
 
 The three fields are seperated by an arbitrary number of whitespaces, while anything behind a # character is ignored and considered a comment.
-
-
-=head2 Event based handlers
-
-An alternative to using a simple configuration file are event directory scripts; if enabled with a proper base value (e.g. F</etc/magmakeys/events>), magmakeys will check various subdirectories for scripts to execute. An event with the type I<TYPE>, the name I<NAME> and the value <VALUE> will trigger the search for executables in the following directories below the specified base directory:
-
-=over
-
-=item F<I<BASE>/I<TYPE>>
-
-(e.g. F</etc/magmakeys/events/EV_KEY/>)
-
-=item F<I<BASE>/I<NAME>>
-
-(e.g. F</etc/magmakeys/events/KEY_RADIO/>)
-
-=item F<I<BASE>/I<NAME>/I<VALUE>>
-
-(e.g. F</etc/magmakeys/events/EV_KEY/>)
-
-=item F<I<BASE>/I<TYPE>/I<NAME>>
-
-(e.g. F</etc/magmakeys/events/EV_KEY/KEY_RADIO/>)
-
-=item F<I<BASE>/I<TYPE>/I<NAME>/I<VALUE>>
-
-(e.g. F</etc/magmakeys/events/EV_KEY/KEY_RADIO/1>)
-
-=back
-
-Scripts found in these directories are executed with no particular order. For a script to be executed, the following criteria have to be met:
-
-=over
-
-=item *
-
-The script is placed in a directory searched by the wanted device handler
-
-=item *
-
-The script is marked executable
-
-=item *
-
-The script meets the naming convention of L<run-parts>
-
-=item *
-
-The script name does not end in F<.disabled> or F<.dpkg-*>
-
-=back
-
-Various aspects of the triggering event are exported to environment variables:
-
-=over
-
-=item C<EVENT_TYPE>
-
-The type of the event, for example "EV_KEY" or "EV_SW".
-
-=item C<EVENT_NAME>
-
-The name of the event, for example "KEY_POWER" or "SW_LID".
-
-=item C<EVENT_VALUE>
-
-The numeric value of the event
-
-=back
 
 =head1 EXAMPLE
 
@@ -237,7 +163,6 @@ use magmakeys::DeviceFile;
 use magmakeys::SelectDeviceWatcher;
 use magmakeys::DBusDeviceWatcher;
 use magmakeys::EventFileManager;
-use magmakeys::EventDirectoryManager;
 
 use Getopt::Long;
 use Pod::Usage;
@@ -247,7 +172,6 @@ my $help = 0;
 my $dump_events = 0;
 my $config_file = undef;
 my $key_dir = undef;
-my $event_dir = undef;
 my $table_file = "/usr/share/magmakeys/eventcodes.txt";
 my @manual_devs = ();
 
@@ -280,7 +204,6 @@ $SIG{HUP} = \&signal_hup;
 my $result = GetOptions ("help|h"     => \$help,
                          "hal!"       => \$use_hal,
                          "dump"       => \$dump_events,
-                         "eventdir|e=s" => \$event_dir,
                          "dev|d=s"    => \@manual_devs,
                          "keydir|k=s" => \$key_dir,
                          "table|t=s"  => \$table_file);
@@ -349,14 +272,8 @@ sub load_config {
 }
 load_config();
 
-if ($event_dir) {
-    my $ed_manager = new magmakeys::EventDirectoryManager($event_dir);
-    $ed_manager->dump($dump_events);
-    $watcher->add_listener($ed_manager);
-}
-
-unless ( $dump_events || defined $key_dir || defined $event_dir) {
-    showHelp("Either --keydir, --eventdir or --dump is required. Nothing to do, quitting.", 1);
+unless ( $dump_events || defined $key_dir ) {
+    showHelp("Either --keydir or --dump is required. Nothing to do, quitting.", 1);
 }
 
 $watcher->watch();
