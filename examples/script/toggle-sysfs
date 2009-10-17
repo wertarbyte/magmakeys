@@ -1,0 +1,19 @@
+#!/bin/sh
+# toggle the status of a sysfs file between the values 0 and 1
+#
+# helper script for magmakeys
+# Stefan Tomanek <stefan@pico.ruhr.de>
+
+SYSFILE="$1"
+
+if [ ! -r "$SYSFILE" ]; then
+    exit 1
+fi
+
+STATE="$(cat "$SYSFILE")"
+
+if [ "$STATE" -eq 1 ]; then
+    echo -n 0 > $SYSFILE
+else
+    echo -n 1 > $SYSFILE
+fi

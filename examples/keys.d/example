@@ -9,10 +9,10 @@
 # multiple values can be specified for an event handler by seperting them with a comma.
 
 # (de)activate Bluetooth wenn pressing Fn+F5 on thinkpads
-#KEY_RADIO       1       /usr/local/sbin/toggle-sysfs.sh /sys/bus/platform/devices/thinkpad_acpi/bluetooth_enable
+#KEY_RADIO       1       /usr/local/sbin/toggle-sysfs /sys/bus/platform/devices/thinkpad_acpi/bluetooth_enable
 
 # toggle press-to-select ability of the thinkpad trackpoint
-#KEY_F22         1       /usr/local/sbin/toggle-sysfs.sh /sys/devices/platform/i8042/serio1/press_to_select
+#KEY_F22         1       /usr/local/sbin/toggle-sysfs /sys/devices/platform/i8042/serio1/press_to_select
 
 # volume control
 #KEY_VOLUMEUP    1,2     /usr/bin/amixer set Master 5%+ 
