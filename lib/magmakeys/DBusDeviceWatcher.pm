@@ -2,8 +2,7 @@
     use strict;
 
     package magmakeys::DBusDeviceWatcher;
-    use magmakeys::DeviceWatcher;
-    our @ISA=("magmakeys::DeviceWatcher");
+    use base "magmakeys::DeviceWatcher";
 
     sub new {
         require Net::DBus;
