@@ -53,6 +53,7 @@
         my $event = shift;
         print "Launching command '", $cmd, "'\n";
         if (fork() == 0) {
+            # reset signal handler
             $SIG{CHLD} = undef;
             $SIG{HUP} = undef;
             # set up environment
