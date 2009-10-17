@@ -1,0 +1,13 @@
+# Defaults for magmakeys initscript
+# sourced by /etc/init.d/magmakeys
+# installed at /etc/default/magmakeys by the maintainer scripts
+
+#
+# This is a POSIX shell fragment
+#
+
+# Additional options that are passed to the Daemon.
+#
+# add --nohal to disable HAL support
+# add input device names to manually specify them
+DAEMON_OPTS=""

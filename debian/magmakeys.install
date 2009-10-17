@@ -1,0 +1,4 @@
+bin/magmakeys /usr/sbin/
+lib/magmakeys /usr/share/perl5/
+examples/keys.d/* /etc/magmakeys/keys.d/
+share/eventcodes.txt /usr/share/magmakeys/
