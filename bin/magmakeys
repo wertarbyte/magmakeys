@@ -13,7 +13,7 @@
 # like wireless or suspend controls that usually
 # are not user specific
 
-use constant VERSION => "0.7.2";
+use constant VERSION => "0.8.0";
 
 use strict;
 
@@ -164,6 +164,8 @@ use magmakeys::SelectDeviceWatcher;
 use magmakeys::DBusDeviceWatcher;
 use magmakeys::EventFileManager;
 
+use POSIX ();
+
 use Getopt::Long;
 use Pod::Usage;
 
@@ -187,8 +189,19 @@ sub say {
     }
 }
 
+sub signal_hup {
+    say 0, "SIGHUP received, reloading configuration";
+    load_config();
+    
+    # restart device watcher
+    $watcher->watch();
+}
+
 # install signal handlers
 $SIG{CHLD} = "IGNORE";
+my $sigset = POSIX::SigSet->new();
+my $hup_action = POSIX::SigAction->new('signal_hup', $sigset, &POSIX::SA_NODEFER);
+POSIX::sigaction(&POSIX::SIGHUP, $hup_action);
 
 # parse command line
 my $result = GetOptions ("help|h"     => \$help,
