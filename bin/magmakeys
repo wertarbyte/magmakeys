@@ -187,18 +187,8 @@ sub say {
     }
 }
 
-sub signal_hup {
-    say 0, "SIGHUP received, reloading configuration";
-    
-    load_config();
-    
-    # restart device watcher
-    $watcher->watch();
-}
-
 # install signal handlers
 $SIG{CHLD} = "IGNORE";
-$SIG{HUP} = \&signal_hup;
 
 # parse command line
 my $result = GetOptions ("help|h"     => \$help,
