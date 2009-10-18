@@ -1,3 +1,9 @@
+magmakeys (0.8.0-2) unstable; urgency=low
+
+  * fix init script (add reload)
+
+ -- Stefan Tomanek <stefan@pico.ruhr.de>  Sun, 18 Oct 2009 11:51:41 +0200
+
 magmakeys (0.8.0-1) unstable; urgency=low
 
   * updated example configuration
