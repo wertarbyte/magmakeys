@@ -63,6 +63,9 @@
         my $event = shift;
         
         my $cmds = undef;
+        
+        # are we ignoring this event?
+        return if $self->ignore_event($event->name);
 
         if ($event->type_description eq "EV_KEY") {
             # handle multiple pressed keys by joing their names
