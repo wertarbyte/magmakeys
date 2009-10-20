@@ -1,3 +1,9 @@
+magmakeys (0.8.1-1) unstable; urgency=low
+
+  * add ignore-event capability (through -i <eventname> switch)
+
+ -- Stefan Tomanek <stefan@pico.ruhr.de>  Tue, 20 Oct 2009 15:44:26 +0200
+
 magmakeys (0.8.0-2) unstable; urgency=low
 
   * fix init script (add reload)
