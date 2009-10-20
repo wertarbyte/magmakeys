@@ -25,7 +25,7 @@ magmakeys -- global hotkey event daemon
 
 =head1 SYNOPSIS
 
-B<magmakeys> [B<-k> I<dir>] [B<--dump>] [B<-t> I<tablefile>] [B<--hal> | B<--nohal> [B<-d> I<device>] [I<devices...>]] 
+B<magmakeys> [B<-k> I<dir>] [B<--dump>] [B<-t> I<tablefile>] [B<--hal> | B<--nohal> [B<-d> I<device>] [I<devices...>]] [B<--ignore-event I<event>]
 
 =head1 DESCRIPTION
 
@@ -64,6 +64,10 @@ Specifies a single input device I<dev> to read from
 =item B<--dump>
 
 Dump all recognized events to STDOUT
+
+=item B<--ignore-event> I<event>
+
+Ignore received input events with the name I<event>.
 
 =back
 
@@ -176,6 +180,7 @@ my $config_file = undef;
 my $key_dir = undef;
 my $table_file = "/usr/share/magmakeys/eventcodes.txt";
 my @manual_devs = ();
+my @ignore = ();
 
 my $event_manager;
 my $watcher;
@@ -209,6 +214,7 @@ my $result = GetOptions ("help|h"     => \$help,
                          "dump"       => \$dump_events,
                          "dev|d=s"    => \@manual_devs,
                          "keydir|k=s" => \$key_dir,
+                         "ignore-event|i=s" => \@ignore,
                          "table|t=s"  => \$table_file);
 
 if ($help || not $result) {
@@ -248,6 +254,10 @@ $watcher->dump($dump_events);
 
 $event_manager = new magmakeys::EventFileManager();
 $event_manager->dump($dump_events);
+# feed ignored events
+for (@ignore) {
+    $event_manager->ignore_event($_, 1);
+}
 $watcher->add_listener($event_manager);
 
 sub load_config {

@@ -10,6 +10,7 @@
         my $class = ref($proto) || $proto;
         my $self = $class->SUPER::new();
         $self->{"keys"} = {};
+        $self->{"ignore"} = {};
         
         bless($self, $class);
     }
@@ -37,6 +38,9 @@
 
     sub handle_event {
         my ($self, $event) = @_;
+        # are we ignoring this event?
+        return if $self->ignore_event($event->name);
+
         if ($event->type_description eq "EV_KEY") {
             # handle multiple pressed keys by joing their names
             if ($event->value == 1) {
@@ -66,6 +70,14 @@
             }
             exec($cmd);
         }
+    }
+
+    sub ignore_event {
+        my ($self, $event, $value) = @_;
+        if (defined $value) {
+            $self->{"ignore"}{lc $event} = $value;
+        }
+        return $self->{"ignore"}{lc $event};
     }
 
     1;
