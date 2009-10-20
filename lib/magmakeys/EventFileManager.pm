@@ -10,7 +10,6 @@
         
         my $self = $class->SUPER::new();
 
-        $self->{"keys"} = {};
         $self->{"HANDLERS"} = {};
 
         bless($self, $class);
