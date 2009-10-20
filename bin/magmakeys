@@ -13,7 +13,7 @@
 # like wireless or suspend controls that usually
 # are not user specific
 
-use constant VERSION => "0.8.0";
+use constant VERSION => "0.8.1";
 
 use strict;
 
@@ -67,7 +67,7 @@ Dump all recognized events to STDOUT
 
 =item B<--ignore-event> I<event>
 
-Ignore received input events with the name I<event>.
+Ignore received input events with the name I<event>. These events will show up in <B--dump>, but not change the key state. This is useful for excluding modifier keys (like the Fn key on notebooks) from showing up showing up erratically in the set of pressed keys.
 
 =back
 
