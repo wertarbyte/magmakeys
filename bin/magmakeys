@@ -25,7 +25,7 @@ magmakeys -- global hotkey event daemon
 
 =head1 SYNOPSIS
 
-B<magmakeys> [B<-k> I<dir>] [B<--dump>] [B<-t> I<tablefile>] [B<--hal> | B<--nohal> [B<-d> I<device>] [I<devices...>]] [B<--ignore-event I<event>]
+B<magmakeys> [B<-k> I<dir>] [B<--dump>] [B<-t> I<tablefile>] [B<--hal> | B<--nohal> [B<-d> I<device>] [I<devices...>]] [B<--ignore-event> I<event>]
 
 =head1 DESCRIPTION
 
