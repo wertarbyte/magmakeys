@@ -1,8 +1,8 @@
 #! /bin/sh
 ### BEGIN INIT INFO
 # Provides:          magmakeys
-# Required-Start:    hal
-# Required-Stop:     
+# Required-Start:    $remote_fs hal
+# Required-Stop:     $remote_fs
 # Default-Start:     2 3 4 5
 # Default-Stop:      0 1 6
 # Short-Description: system hotkey daemon
