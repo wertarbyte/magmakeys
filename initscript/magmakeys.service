@@ -1,0 +1,11 @@
+[Unit]
+Description=system hotkey daemon
+After=dbus.service
+
+[Service]
+Type=simple
+PIDFile=/run/magmakeys.pid
+ExecStart=/usr/sbin/magmakeys -k /etc/magmakeys/keys.d/ -t /usr/share/magmakeys/eventcodes.txt
+
+[Install]
+WantedBy=multi-user.target
